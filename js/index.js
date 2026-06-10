@@ -128,13 +128,16 @@ export function addItem() {
     const label = labelInput.value.trim();
     if (!label) return;
     
-    let weight = parseInt(weightInput.value, 10);
-    if (isNaN(weight) || weight < 1) weight = 1;
+    let weight = 1;
+    if (weightInput) {
+        weight = parseInt(weightInput.value, 10);
+        if (isNaN(weight) || weight < 1) weight = 1;
+        weightInput.value = "1";
+    }
 
     const color = COLORS[state.items.length % COLORS.length];
     state.items.push({ label, color, weight });
     labelInput.value = "";
-    weightInput.value = "1";
     
     saveToCache();
     renderItems();

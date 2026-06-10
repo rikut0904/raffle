@@ -376,6 +376,31 @@ body.modal-open {
     flex-shrink: 0;
 }
 
+/* History List Styles */
+.intro-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.intro-raffle-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: white;
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.intro-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
 /* Dashboard Specific Styles */
 .admin-grid {
     display: grid;
