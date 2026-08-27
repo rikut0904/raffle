@@ -1,0 +1,82 @@
+name: Migrate Firebase users to Common ID
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run without creating Common ID users or changing the database"
+        required: true
+        type: choice
+        options:
+          - "true"
+          - "false"
+        default: "true"
+      update_db:
+        description: "Update user_models and raffle_models after migration"
+        required: true
+        type: choice
+        options:
+          - "false"
+          - "true"
+        default: "false"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: common-id-user-migration
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: Migrate users
+    runs-on: ubuntu-latest
+    environment:
+      name: common-id-migration
+    env:
+      COMMON_ID_API_ORIGIN: ${{ secrets.COMMON_ID_API_ORIGIN }}
+      COMMON_ID_API_KEY: ${{ secrets.COMMON_ID_API_KEY }}
+      COMMON_ID_CLIENT_ID: ${{ secrets.COMMON_ID_CLIENT_ID }}
+      FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Validate migration mode
+        run: |
+          if [ "${{ inputs.update_db }}" = "true" ] && [ "${{ inputs.dry_run }}" != "false" ]; then
+            echo "update_db=true requires dry_run=false"
+            exit 1
+          fi
+
+      - name: Validate required secrets
+        run: |
+          for name in COMMON_ID_API_ORIGIN COMMON_ID_API_KEY COMMON_ID_CLIENT_ID FIREBASE_PROJECT_ID FIREBASE_SERVICE_ACCOUNT_JSON; do
+            if [ -z "${!name}" ]; then
+              echo "$name is not configured"
+              exit 1
+            fi
+          done
+          if [ "${{ inputs.update_db }}" = "true" ] && [ -z "$DATABASE_URL" ]; then
+            echo "DATABASE_URL is required when update_db=true"
+            exit 1
+          fi
+
+      - name: Run migration
+        run: |
+          go run ./cmd/migrate-users \
+            -endpoint "$COMMON_ID_API_ORIGIN" \
+            -api-key "$COMMON_ID_API_KEY" \
+            -client-id "$COMMON_ID_CLIENT_ID" \
+            -firebase-project-id "$FIREBASE_PROJECT_ID" \
+            -dry-run=${{ inputs.dry_run }} \
+            -update-db=${{ inputs.update_db }}
