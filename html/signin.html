@@ -11,24 +11,14 @@
 <body class="admin-body">
     <div class="admin-layout" style="justify-content: center; align-items: center;">
         <main class="content-body" style="padding: 20px;">
-            <div id="admin-status" class="admin-notice">設定を確認しています...</div>
+            <div id="admin-status" class="admin-notice">Common IDでアカウントを作成してください。</div>
 
             <section class="admin-card auth-card">
                 <div class="auth-card-header">
                     <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 8px;">Create Account</h1>
                     <p style="color: var(--text-muted); font-size: 0.95rem;">アカウント作成</p>
                 </div>
-                <form id="signin-form" class="admin-form">
-                    <label class="admin-field">
-                        <span>メールアドレス</span>
-                        <input type="email" id="signin-email" placeholder="you@example.com" required autocomplete="email">
-                    </label>
-                    <label class="admin-field">
-                        <span>パスワード</span>
-                        <input type="password" id="signin-password" placeholder="••••••••" required autocomplete="new-password" minlength="8">
-                    </label>
-                    <button type="submit" class="btn primary" style="width: 100%; margin-top: 12px;">アカウント作成</button>
-                </form>
+                <a href="/auth/signup" class="btn primary" style="width: 100%; margin-top: 12px;">Common IDでアカウント作成</a>
 
                 <div class="auth-card-footer">
                     <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;">既にアカウントをお持ちの場合</p>
@@ -42,7 +32,6 @@
         </main>
     </div>
 
-    <script type="module" src="/js/signin.js"></script>
 </body>
 
 </html>

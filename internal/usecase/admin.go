@@ -5,6 +5,7 @@ import (
 	"presentation-raffle/internal/domain/entity"
 	"presentation-raffle/internal/domain/repository"
 	"presentation-raffle/internal/domain/service"
+	"time"
 )
 
 type AdminUsecase struct {
@@ -46,6 +47,15 @@ func (u *AdminUsecase) VerifyToken(ctx context.Context, idToken string) (*entity
 		return nil, err
 	}
 
+	return &saved, nil
+}
+
+func (u *AdminUsecase) SyncUser(ctx context.Context, authUser entity.AuthenticatedUser) (*entity.User, error) {
+	user := entity.User{UID: authUser.UID, Email: authUser.Email, DisplayName: authUser.DisplayName, PhotoURL: authUser.PhotoURL, Provider: authUser.Provider, EmailVerified: authUser.EmailVerified, LastLoginAt: time.Now()}
+	saved, err := u.userRepo.Upsert(ctx, user)
+	if err != nil {
+		return nil, err
+	}
 	return &saved, nil
 }
 

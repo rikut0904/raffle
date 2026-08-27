@@ -13,7 +13,7 @@ export function renderHeader() {
             </div>
             <div class="nav-group">
                 <span id="user-email" class="nav-user-email"></span>
-                <button id="logout-button" class="btn nav-logout-btn">ログアウト</button>
+                <a id="logout-button" href="/auth/logout" class="btn nav-logout-btn">ログアウト</a>
             </div>
         </div>
     `;

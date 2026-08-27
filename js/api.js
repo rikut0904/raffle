@@ -1,4 +1,4 @@
-import { getRaffles, setRaffles, setUser, getUser } from "./cache.js";
+import { setRaffles, setUser } from "./cache.js";
 
 async function buildError(res) {
     let message = "API Error";
@@ -21,13 +21,6 @@ async function buildError(res) {
 }
 
 export async function fetchAppData() {
-    const cachedUser = getUser();
-    const cachedRaffles = getRaffles();
-
-    if (cachedUser && cachedRaffles) {
-        return { user: cachedUser, raffles: cachedRaffles };
-    }
-
     const [userResponse, rafflesResponse] = await Promise.all([
         fetch("/api/dashboard/me", { credentials: "include", cache: "no-store" }),
         fetch("/api/dashboard/raffles", { credentials: "include", cache: "no-store" }),

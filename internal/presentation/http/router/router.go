@@ -4,12 +4,14 @@ import (
 	"net/http"
 	"strings"
 
+	"presentation-raffle/internal/infrastructure/auth"
+
 	"github.com/labstack/echo/v4"
 
 	"presentation-raffle/internal/presentation/http/handler"
 )
 
-func Register(e *echo.Echo, adminHandler *handler.AdminHandler) {
+func Register(e *echo.Echo, adminHandler *handler.AdminHandler, commonID *auth.CommonID) {
 	e.HTTPErrorHandler = customHTTPErrorHandler
 
 	e.Static("/css", "css")
@@ -20,10 +22,10 @@ func Register(e *echo.Echo, adminHandler *handler.AdminHandler) {
 	})
 	e.GET("/dashboard", func(c echo.Context) error {
 		return c.File("html/dashboard.html")
-	}, PageAuthMiddleware)
+	}, PageAuthMiddleware(commonID))
 	e.GET("/raffle", func(c echo.Context) error {
 		return c.File("html/raffle.html")
-	}, PageAuthMiddleware)
+	}, PageAuthMiddleware(commonID))
 	e.GET("/login", func(c echo.Context) error {
 		return c.File("html/login.html")
 	})
@@ -31,12 +33,15 @@ func Register(e *echo.Echo, adminHandler *handler.AdminHandler) {
 		return c.File("html/signin.html")
 	})
 
-	e.GET("/api/config/firebase", adminHandler.GetFirebaseConfig)
-	e.POST("/api/auth/login", adminHandler.Login)
+	e.GET("/auth/login", adminHandler.BeginLogin)
+	e.GET("/auth/signup", adminHandler.BeginSignup)
+	e.GET("/auth/callback", adminHandler.Callback)
+	e.GET("/auth/logout", adminHandler.Logout)
+	e.GET("/auth/logout/callback", adminHandler.LogoutCallback)
 	e.POST("/api/auth/logout", adminHandler.Logout)
 
 	api := e.Group("/api/dashboard")
-	api.Use(AuthMiddleware)
+	api.Use(AuthMiddleware(commonID))
 	api.GET("/me", adminHandler.GetMe)
 	api.GET("/raffles", adminHandler.ListRaffles)
 	api.GET("/raffles/:id", adminHandler.GetRaffle)

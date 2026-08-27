@@ -11,24 +11,14 @@
 <body class="admin-body">
     <div class="admin-layout" style="justify-content: center; align-items: center;">
         <main class="content-body" style="padding: 20px;">
-            <div id="admin-status" class="admin-notice">設定を確認しています...</div>
+            <div id="admin-status" class="admin-notice">Common IDでログインしてください。</div>
 
             <section class="admin-card auth-card">
                 <div class="auth-card-header">
                     <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 8px;">Welcome Back</h1>
                     <p style="color: var(--text-muted); font-size: 0.95rem;">ログイン</p>
                 </div>
-                <form id="login-form" class="admin-form">
-                    <label class="admin-field">
-                        <span>メールアドレス</span>
-                        <input type="email" id="login-email" placeholder="you@example.com" required autocomplete="email">
-                    </label>
-                    <label class="admin-field">
-                        <span>パスワード</span>
-                        <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
-                    </label>
-                    <button type="submit" class="btn primary" style="width: 100%; margin-top: 12px;">ログイン</button>
-                </form>
+                <a href="/auth/login" class="btn primary" style="width: 100%; margin-top: 12px;">Common IDでログイン</a>
 
                 <div class="auth-card-footer">
                     <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;">アカウントをお持ちでない場合</p>
@@ -42,7 +32,6 @@
         </main>
     </div>
 
-    <script type="module" src="/js/login.js"></script>
 </body>
 
 </html>
