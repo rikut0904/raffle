@@ -4,48 +4,27 @@ import (
 	"context"
 	"presentation-raffle/internal/domain/entity"
 	"presentation-raffle/internal/domain/repository"
-	"presentation-raffle/internal/domain/service"
+	"time"
 )
 
 type AdminUsecase struct {
 	userRepo   repository.UserRepository
 	raffleRepo repository.RaffleRepository
-	verifier   service.TokenVerifier
 }
 
-func NewAdminUsecase(userRepo repository.UserRepository, raffleRepo repository.RaffleRepository, verifier service.TokenVerifier) *AdminUsecase {
+func NewAdminUsecase(userRepo repository.UserRepository, raffleRepo repository.RaffleRepository) *AdminUsecase {
 	return &AdminUsecase{
 		userRepo:   userRepo,
 		raffleRepo: raffleRepo,
-		verifier:   verifier,
 	}
 }
 
-func (u *AdminUsecase) VerifyToken(ctx context.Context, idToken string) (*entity.User, error) {
-	authUser, err := u.verifier.VerifyIDToken(ctx, idToken)
-	if err != nil {
-		return nil, err
-	}
-
-	user, err := u.userRepo.GetByUID(ctx, authUser.UID)
-	if err != nil {
-		// New user or error
-		user = entity.User{
-			UID:           authUser.UID,
-			Email:         authUser.Email,
-			DisplayName:   authUser.DisplayName,
-			PhotoURL:      authUser.PhotoURL,
-			Provider:      authUser.Provider,
-			EmailVerified: authUser.EmailVerified,
-		}
-	}
-
-	// Always update / Create
+func (u *AdminUsecase) SyncUser(ctx context.Context, authUser entity.AuthenticatedUser) (*entity.User, error) {
+	user := entity.User{UID: authUser.UID, Email: authUser.Email, DisplayName: authUser.DisplayName, PhotoURL: authUser.PhotoURL, Provider: authUser.Provider, EmailVerified: authUser.EmailVerified, LastLoginAt: time.Now()}
 	saved, err := u.userRepo.Upsert(ctx, user)
 	if err != nil {
 		return nil, err
 	}
-
 	return &saved, nil
 }
 

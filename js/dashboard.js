@@ -255,7 +255,7 @@ async function saveRaffle(event) {
 
 async function init() {
     renderHeader();
-    
+
     if (raffleForm) {
         raffleForm.onsubmit = saveRaffle;
     }

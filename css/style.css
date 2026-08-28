@@ -99,6 +99,105 @@ body.modal-open {
     transform: none !important;
 }
 
+/* Authentication */
+.auth-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.auth-shell {
+    width: min(100%, 440px);
+}
+
+.auth-card {
+    padding: 40px 36px 32px;
+    background: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid var(--glass-border);
+    border-radius: 28px;
+    box-shadow: 0 24px 70px rgba(83, 60, 154, 0.14);
+    text-align: center;
+}
+
+.auth-card h1 {
+    margin: 0;
+    font-size: 2rem;
+    letter-spacing: -0.04em;
+}
+
+.auth-description {
+    margin: 12px auto 24px;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+    line-height: 1.7;
+}
+
+.auth-action {
+    width: 100%;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 18px;
+    color: #9ca3af;
+    font-size: 0.75rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: "";
+    height: 1px;
+    flex: 1;
+    background: var(--glass-border);
+}
+
+.auth-switch-copy {
+    margin: 0 0 10px;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+}
+
+.auth-back-link {
+    display: inline-block;
+    margin-top: 24px;
+    color: var(--text-muted);
+    font-size: 0.84rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-back-link:hover {
+    color: var(--accent);
+}
+
+.nav-logout-btn {
+    padding: 9px 15px;
+    color: #b42318 !important;
+    background: rgba(180, 35, 24, 0.06) !important;
+    border-color: rgba(180, 35, 24, 0.14) !important;
+}
+
+.nav-logout-btn:hover {
+    color: #fff !important;
+    background: #b42318 !important;
+    border-color: #b42318 !important;
+}
+
+@media (max-width: 520px) {
+    .auth-page {
+        padding: 16px;
+    }
+
+    .auth-card {
+        padding: 32px 22px 26px;
+    }
+}
+
 /* Admin Layout - Top Navigation */
 .admin-layout {
     display: flex;
@@ -632,12 +731,6 @@ body.modal-open {
 }
 
 /* Result Modal Specifics */
-.modal-body-scroll {
-    overflow-y: auto;
-    max-height: 60vh;
-    padding: 20px;
-}
-
 .result-label {
     text-transform: uppercase;
     letter-spacing: 0.1em;
@@ -664,28 +757,6 @@ body.modal-open {
     flex-direction: column;
     align-items: center;
     gap: 20px;
-}
-
-.result-modal-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 96px;
-    padding: 8px 14px;
-    border-radius: 999px;
-    background: rgba(107, 70, 193, 0.1);
-    color: var(--accent);
-    font-size: 0.82rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-
-.result-modal-copy {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 1rem;
-    line-height: 1.6;
 }
 
 .result-modal-title {

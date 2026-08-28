@@ -29,7 +29,8 @@ func Run() error {
 	e.Use(middleware.Recover())
 	e.Use(session.Middleware(newSessionStore(cfg)))
 
-	adminHandler, adminErr := buildAdminHandler(cfg)
+	commonID := auth.NewCommonID(cfg)
+	adminHandler, adminErr := buildAdminHandler(cfg, commonID)
 	if adminErr != nil && adminHandler == nil {
 		return adminErr
 	}
@@ -38,7 +39,7 @@ func Run() error {
 		e.Logger.Warn(adminErr)
 	}
 
-	router.Register(e, adminHandler)
+	router.Register(e, adminHandler, commonID)
 
 	return e.Start(cfg.ServerAddr)
 }
@@ -54,32 +55,20 @@ func newSessionStore(cfg config.Config) sessions.Store {
 	return sessions.NewCookieStore([]byte(cfg.SessionSecret))
 }
 
-func buildAdminHandler(cfg config.Config) (*handler.AdminHandler, error) {
-	clientConfig := handler.FirebaseClientConfig{
-		APIKey:     cfg.FirebaseAPIKey,
-		AuthDomain: cfg.FirebaseAuthDomain,
-		ProjectID:  cfg.FirebaseProjectID,
-		AppID:      cfg.FirebaseAppID,
-	}
-
+func buildAdminHandler(cfg config.Config, commonID *auth.CommonID) (*handler.AdminHandler, error) {
 	db, err := database.NewPostgresConnection(cfg.DatabaseURL)
 	if err != nil {
-		return handler.NewUnavailableAdminHandler(clientConfig, fmt.Sprintf("database unavailable: %v", err)), err
+		return handler.NewUnavailableAdminHandler(commonID, fmt.Sprintf("database unavailable: %v", err)), err
 	}
 
 	userRepository := userinfra.NewPostgresUserRepository(db)
 	raffleRepository := raffleinfra.NewPostgresRaffleRepository(db)
 	if cfg.AutoMigrate {
 		if err := database.Migrate(db); err != nil {
-			return handler.NewUnavailableAdminHandler(clientConfig, fmt.Sprintf("migration failed: %v", err)), err
+			return handler.NewUnavailableAdminHandler(commonID, fmt.Sprintf("migration failed: %v", err)), err
 		}
 	}
 
-	tokenVerifier, err := auth.NewFirebaseVerifier(cfg)
-	if err != nil {
-		return handler.NewUnavailableAdminHandler(clientConfig, fmt.Sprintf("firebase unavailable: %v", err)), err
-	}
-
-	adminUsecase := usecase.NewAdminUsecase(userRepository, raffleRepository, tokenVerifier)
-	return handler.NewAdminHandler(adminUsecase, clientConfig), nil
+	adminUsecase := usecase.NewAdminUsecase(userRepository, raffleRepository)
+	return handler.NewAdminHandler(adminUsecase, commonID), nil
 }

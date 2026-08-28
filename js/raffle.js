@@ -318,13 +318,6 @@ async function init() {
         }
     }, { capture: true });
 
-    const logoutButton = document.getElementById("logout-button");
-    if (logoutButton) {
-        logoutButton.onclick = async () => {
-            await logoutUser();
-        };
-    }
-
     try {
         let targetData = null;
         if (id) {
