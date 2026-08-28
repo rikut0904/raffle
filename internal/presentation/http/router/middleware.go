@@ -3,6 +3,7 @@ package router
 import (
 	"log"
 	"net/http"
+	"strings"
 
 	"presentation-raffle/internal/infrastructure/auth"
 
@@ -16,8 +17,17 @@ func sessionOptions(maxAge int) *sessions.Options {
 		Path:     "/",
 		HttpOnly: true,
 		MaxAge:   maxAge,
+		Secure:   false,
 		SameSite: http.SameSiteLaxMode,
 	}
+}
+
+func secureRequest(c echo.Context) bool {
+	if c.IsTLS() {
+		return true
+	}
+	forwardedProto := strings.TrimSpace(strings.Split(c.Request().Header.Get("X-Forwarded-Proto"), ",")[0])
+	return strings.EqualFold(forwardedProto, "https")
 }
 
 func getSessionUserUID(c echo.Context, commonID *auth.CommonID) (string, error) {
@@ -32,6 +42,7 @@ func getSessionUserUID(c echo.Context, commonID *auth.CommonID) (string, error) 
 		log.Printf("No uid in session. values: %+v", sess.Values)
 		delete(sess.Values, "uid")
 		sess.Options = sessionOptions(-1)
+		sess.Options.Secure = secureRequest(c)
 		_ = sess.Save(c.Request(), c.Response())
 		return "", echo.NewHTTPError(http.StatusUnauthorized, "ログインしてください")
 	}
@@ -65,6 +76,7 @@ func getSessionUserUID(c echo.Context, commonID *auth.CommonID) (string, error) 
 func clearSession(c echo.Context, sess *sessions.Session) {
 	sess.Values = map[any]any{}
 	sess.Options = sessionOptions(-1)
+	sess.Options.Secure = secureRequest(c)
 	_ = sess.Save(c.Request(), c.Response())
 }
 

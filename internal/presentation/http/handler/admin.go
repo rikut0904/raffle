@@ -8,6 +8,7 @@ import (
 	"presentation-raffle/internal/domain/entity"
 	"presentation-raffle/internal/infrastructure/auth"
 	"presentation-raffle/internal/usecase"
+	"strings"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -18,6 +19,14 @@ type AdminHandler struct {
 	usecase      *usecase.AdminUsecase
 	commonID     *auth.CommonID
 	errorMessage string
+}
+
+func secureRequest(c echo.Context) bool {
+	if c.IsTLS() {
+		return true
+	}
+	forwardedProto := strings.TrimSpace(strings.Split(c.Request().Header.Get("X-Forwarded-Proto"), ",")[0])
+	return strings.EqualFold(forwardedProto, "https")
 }
 
 func NewAdminHandler(usecase *usecase.AdminUsecase, commonID *auth.CommonID) *AdminHandler {
@@ -63,7 +72,7 @@ func (h *AdminHandler) Callback(c echo.Context) error {
 	sess.Options.Path = "/"
 	sess.Options.MaxAge = 86400 * 7 // 7 days
 	sess.Options.HttpOnly = true
-	sess.Options.Secure = false
+	sess.Options.Secure = secureRequest(c)
 	sess.Options.SameSite = http.SameSiteLaxMode
 	sess.Values["uid"] = saved.UID
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
@@ -80,13 +89,13 @@ func (h *AdminHandler) clearSession(c echo.Context) {
 		return
 	}
 	sess.Values = map[any]any{}
-	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: false, SameSite: http.SameSiteLaxMode}
+	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
 	_ = sess.Save(c.Request(), c.Response())
 }
 
 func (h *AdminHandler) Logout(c echo.Context) error {
 	sess, _ := session.Get("session", c)
-	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: false, SameSite: http.SameSiteLaxMode}
+	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
 	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to clear session")
 	}
