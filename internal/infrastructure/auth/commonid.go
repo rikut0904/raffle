@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"presentation-raffle/internal/domain/entity"
@@ -22,10 +21,8 @@ type Pending struct {
 	ExpiresAt       time.Time
 }
 type CommonID struct {
-	cfg     config.Config
-	http    *http.Client
-	mu      sync.Mutex
-	pending map[string]Pending
+	cfg  config.Config
+	http *http.Client
 }
 
 type SessionStatus struct {
@@ -35,7 +32,7 @@ type SessionStatus struct {
 }
 
 func NewCommonID(cfg config.Config) *CommonID {
-	return &CommonID{cfg: cfg, http: http.DefaultClient, pending: make(map[string]Pending)}
+	return &CommonID{cfg: cfg, http: http.DefaultClient}
 }
 
 func randomString() (string, error) {
@@ -51,34 +48,26 @@ func challenge(verifier string) string {
 	return base64.RawURLEncoding.EncodeToString(sum[:])
 }
 
-func (c *CommonID) AuthorizeURL(intent string) (string, error) {
+func (c *CommonID) AuthorizeURL(intent string) (string, Pending, error) {
 	state, err := randomString()
 	if err != nil {
-		return "", err
+		return "", Pending{}, err
 	}
 	verifier, err := randomString()
 	if err != nil {
-		return "", err
+		return "", Pending{}, err
 	}
-	c.mu.Lock()
-	c.pending[state] = Pending{State: state, Verifier: verifier, ExpiresAt: time.Now().Add(10 * time.Minute)}
-	c.mu.Unlock()
+	pending := Pending{State: state, Verifier: verifier, ExpiresAt: time.Now().Add(10 * time.Minute)}
 	q := url.Values{"client_id": {c.cfg.CommonIDClientID}, "redirect_uri": {c.cfg.CommonIDRedirectURI}, "response_type": {"code"}, "scope": {"openid profile email"}, "state": {state}, "code_challenge": {challenge(verifier)}, "code_challenge_method": {"S256"}, "intent": {intent}}
-	return strings.TrimRight(c.cfg.CommonIDOrigin, "/") + "/auth?" + q.Encode(), nil
+	return strings.TrimRight(c.cfg.CommonIDOrigin, "/") + "/auth?" + q.Encode(), pending, nil
 }
 
-func (c *CommonID) Exchange(ctx context.Context, values url.Values) (entity.AuthenticatedUser, error) {
+func (c *CommonID) Exchange(ctx context.Context, values url.Values, pending Pending) (entity.AuthenticatedUser, error) {
 	state, code := values.Get("state"), values.Get("code")
 	if state == "" || code == "" {
 		return entity.AuthenticatedUser{}, fmt.Errorf("authorization callback is incomplete")
 	}
-	c.mu.Lock()
-	pending, ok := c.pending[state]
-	if ok {
-		delete(c.pending, state)
-	}
-	c.mu.Unlock()
-	if !ok || time.Now().After(pending.ExpiresAt) {
+	if state != pending.State || pending.Verifier == "" || time.Now().After(pending.ExpiresAt) {
 		return entity.AuthenticatedUser{}, fmt.Errorf("invalid or expired authorization state")
 	}
 	form := url.Values{"grant_type": {"authorization_code"}, "code": {code}, "client_id": {c.cfg.CommonIDClientID}, "redirect_uri": {c.cfg.CommonIDRedirectURI}, "code_verifier": {pending.Verifier}}
@@ -140,27 +129,18 @@ func (c *CommonID) CheckSession(ctx context.Context, sessionToken string) (Sessi
 	return status, nil
 }
 
-func (c *CommonID) LogoutURL() (string, error) {
+func (c *CommonID) LogoutURL() (string, string, error) {
 	state, err := randomString()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	c.mu.Lock()
-	c.pending[state] = Pending{State: state, ExpiresAt: time.Now().Add(10 * time.Minute)}
-	c.mu.Unlock()
 	q := url.Values{"client_id": {c.cfg.CommonIDClientID}, "post_logout_redirect_uri": {c.cfg.CommonIDLogoutRedirectURI}, "state": {state}}
-	return strings.TrimRight(c.cfg.CommonIDOrigin, "/") + "/logout?" + q.Encode(), nil
+	return strings.TrimRight(c.cfg.CommonIDOrigin, "/") + "/logout?" + q.Encode(), state, nil
 }
 
-func (c *CommonID) ValidateLogout(values url.Values) error {
+func (c *CommonID) ValidateLogout(values url.Values, expectedState string) error {
 	state := values.Get("state")
-	c.mu.Lock()
-	pending, ok := c.pending[state]
-	if ok {
-		delete(c.pending, state)
-	}
-	c.mu.Unlock()
-	if !ok || time.Now().After(pending.ExpiresAt) || (values.Get("logout") != "success" && values.Get("result") != "success") {
+	if state == "" || state != expectedState || (values.Get("logout") != "success" && values.Get("result") != "success") {
 		return fmt.Errorf("common id logout failed")
 	}
 	return nil

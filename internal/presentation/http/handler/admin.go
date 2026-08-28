@@ -8,7 +8,9 @@ import (
 	"presentation-raffle/internal/domain/entity"
 	"presentation-raffle/internal/infrastructure/auth"
 	"presentation-raffle/internal/usecase"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
@@ -20,6 +22,13 @@ type AdminHandler struct {
 	commonID     *auth.CommonID
 	errorMessage string
 }
+
+const (
+	loginPendingStateKey    = "common_id_login_state"
+	loginPendingVerifierKey = "common_id_login_verifier"
+	loginPendingExpiryKey   = "common_id_login_expiry"
+	logoutPendingStateKey   = "common_id_logout_state"
+)
 
 func secureRequest(c echo.Context) bool {
 	if c.IsTLS() {
@@ -43,8 +52,20 @@ func (h *AdminHandler) beginAuth(c echo.Context, intent string) error {
 	if h.errorMessage != "" {
 		return echo.NewHTTPError(http.StatusServiceUnavailable, h.errorMessage)
 	}
-	target, err := h.commonID.AuthorizeURL(intent)
+	target, pending, err := h.commonID.AuthorizeURL(intent)
 	if err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "認証を開始できません")
+	}
+	sess, _ := session.Get("session", c)
+	sess.Values[loginPendingStateKey] = pending.State
+	sess.Values[loginPendingVerifierKey] = pending.Verifier
+	sess.Values[loginPendingExpiryKey] = strconv.FormatInt(pending.ExpiresAt.Unix(), 10)
+	sess.Options.Path = "/"
+	sess.Options.MaxAge = 600
+	sess.Options.HttpOnly = true
+	sess.Options.Secure = secureRequest(c)
+	sess.Options.SameSite = http.SameSiteLaxMode
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "認証を開始できません")
 	}
 	return c.Redirect(http.StatusFound, target)
@@ -57,7 +78,13 @@ func (h *AdminHandler) Callback(c echo.Context) error {
 	if c.QueryParam("error") != "" {
 		return c.Redirect(http.StatusFound, "/login?error=cancelled")
 	}
-	user, err := h.commonID.Exchange(c.Request().Context(), url.Values(c.QueryParams()))
+	sess, _ := session.Get("session", c)
+	pending, err := pendingFromSession(sess)
+	if err != nil {
+		h.clearSession(c)
+		return c.Redirect(http.StatusFound, "/login?error=session_expired")
+	}
+	user, err := h.commonID.Exchange(c.Request().Context(), url.Values(c.QueryParams()), pending)
 	if err != nil {
 		log.Printf("Common ID callback exchange failed: %v", err)
 		h.clearSession(c)
@@ -68,7 +95,10 @@ func (h *AdminHandler) Callback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "ユーザー情報を保存できません")
 	}
 
-	sess, _ := session.Get("session", c)
+	sess, _ = session.Get("session", c)
+	delete(sess.Values, loginPendingStateKey)
+	delete(sess.Values, loginPendingVerifierKey)
+	delete(sess.Values, loginPendingExpiryKey)
 	sess.Options.Path = "/"
 	sess.Options.MaxAge = 86400 * 7 // 7 days
 	sess.Options.HttpOnly = true
@@ -95,23 +125,46 @@ func (h *AdminHandler) clearSession(c echo.Context) {
 
 func (h *AdminHandler) Logout(c echo.Context) error {
 	sess, _ := session.Get("session", c)
-	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
-	if err := sess.Save(c.Request(), c.Response()); err != nil {
-		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to clear session")
-	}
 	if h.errorMessage != "" {
+		sess.Values = map[any]any{}
+		sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
+		_ = sess.Save(c.Request(), c.Response())
 		return c.Redirect(http.StatusFound, "/login")
 	}
-	logoutURL, err := h.commonID.LogoutURL()
+	logoutURL, state, err := h.commonID.LogoutURL()
 	if err != nil {
 		return c.Redirect(http.StatusFound, "/login")
+	}
+	sess.Values = map[any]any{logoutPendingStateKey: state}
+	sess.Options = &sessions.Options{Path: "/", MaxAge: 600, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
+	if err := sess.Save(c.Request(), c.Response()); err != nil {
+		return echo.NewHTTPError(http.StatusInternalServerError, "Failed to clear session")
 	}
 	return c.Redirect(http.StatusFound, logoutURL)
 }
 
 func (h *AdminHandler) LogoutCallback(c echo.Context) error {
-	_ = h.commonID.ValidateLogout(url.Values(c.QueryParams()))
+	sess, _ := session.Get("session", c)
+	expectedState, _ := sess.Values[logoutPendingStateKey].(string)
+	_ = h.commonID.ValidateLogout(url.Values(c.QueryParams()), expectedState)
+	sess.Values = map[any]any{}
+	sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
+	_ = sess.Save(c.Request(), c.Response())
 	return c.Redirect(http.StatusFound, "/login")
+}
+
+func pendingFromSession(sess *sessions.Session) (auth.Pending, error) {
+	state, stateOK := sess.Values[loginPendingStateKey].(string)
+	verifier, verifierOK := sess.Values[loginPendingVerifierKey].(string)
+	expiry, expiryOK := sess.Values[loginPendingExpiryKey].(string)
+	if !stateOK || !verifierOK || !expiryOK || state == "" || verifier == "" {
+		return auth.Pending{}, fmt.Errorf("login pending data is missing")
+	}
+	expiresAt, err := strconv.ParseInt(expiry, 10, 64)
+	if err != nil {
+		return auth.Pending{}, fmt.Errorf("login pending data is invalid")
+	}
+	return auth.Pending{State: state, Verifier: verifier, ExpiresAt: time.Unix(expiresAt, 0)}, nil
 }
 
 func (h *AdminHandler) GetMe(c echo.Context) error {
