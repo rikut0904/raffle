@@ -69,6 +69,7 @@ func main() {
 	}
 
 	ctx := context.Background()
+	httpClient := &http.Client{Timeout: 30 * time.Second}
 	authClient := firebaseClient(ctx, *projectID, *credentialsJSON)
 	users := collectUsers(ctx, authClient)
 	if len(users) == 0 {
@@ -94,7 +95,7 @@ func main() {
 		if end > len(users) {
 			end = len(users)
 		}
-		results := migrateBatch(ctx, *endpoint, *apiKey, *clientID, *dryRun, users[start:end])
+		results := migrateBatch(ctx, httpClient, *endpoint, *apiKey, *clientID, *dryRun, users[start:end])
 		for _, result := range results {
 			allResults = append(allResults, result)
 			if result.Status == "failed" {
@@ -198,7 +199,7 @@ func collectUsers(ctx context.Context, client *firebaseauth.Client) []inputUser 
 	return users
 }
 
-func migrateBatch(ctx context.Context, endpoint, apiKey, clientID string, dryRun bool, users []inputUser) []migrationResult {
+func migrateBatch(ctx context.Context, httpClient *http.Client, endpoint, apiKey, clientID string, dryRun bool, users []inputUser) []migrationResult {
 	body, err := json.Marshal(map[string]any{"client_id": clientID, "dry_run": dryRun, "users": users})
 	if err != nil {
 		log.Fatal(err)
@@ -209,7 +210,7 @@ func migrateBatch(ctx context.Context, endpoint, apiKey, clientID string, dryRun
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-API-Key", apiKey)
-	res, err := http.DefaultClient.Do(req)
+	res, err := httpClient.Do(req)
 	if err != nil {
 		log.Fatalf("Common ID migration request: %v", err)
 	}
