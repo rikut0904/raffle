@@ -56,7 +56,11 @@ func (h *AdminHandler) beginAuth(c echo.Context, intent string) error {
 	if err != nil {
 		return echo.NewHTTPError(http.StatusInternalServerError, "認証を開始できません")
 	}
-	sess, _ := session.Get("session", c)
+	sess, err := session.Get("session", c)
+	if err != nil {
+		log.Printf("Failed to load session before Common ID authentication: %v", err)
+		return echo.NewHTTPError(http.StatusInternalServerError, "セッションを確認できません")
+	}
 	sess.Values[loginPendingStateKey] = pending.State
 	sess.Values[loginPendingVerifierKey] = pending.Verifier
 	sess.Values[loginPendingExpiryKey] = strconv.FormatInt(pending.ExpiresAt.Unix(), 10)
