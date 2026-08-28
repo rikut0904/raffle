@@ -47,7 +47,7 @@ func getSessionUserUID(c echo.Context, commonID *auth.CommonID) (string, error, 
 
 	userUID, ok := sess.Values["uid"].(string)
 	if !ok || userUID == "" {
-		log.Printf("No uid in session. values: %+v", sess.Values)
+		log.Printf("No uid in session; stored_keys=%d", len(sess.Values))
 		delete(sess.Values, "uid")
 		sess.Options = sessionOptions(-1)
 		sess.Options.Secure = secureRequest(c)
