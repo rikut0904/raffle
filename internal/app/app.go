@@ -69,6 +69,6 @@ func buildAdminHandler(cfg config.Config, commonID *auth.CommonID) (*handler.Adm
 		}
 	}
 
-	adminUsecase := usecase.NewAdminUsecase(userRepository, raffleRepository, nil)
+	adminUsecase := usecase.NewAdminUsecase(userRepository, raffleRepository)
 	return handler.NewAdminHandler(adminUsecase, commonID), nil
 }
