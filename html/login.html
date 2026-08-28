@@ -8,29 +8,20 @@
     <link rel="stylesheet" href="/css/style.css" />
 </head>
 
-<body class="admin-body">
-    <div class="admin-layout" style="justify-content: center; align-items: center;">
-        <main class="content-body" style="padding: 20px;">
-            <div id="admin-status" class="admin-notice">Common IDでログインしてください。</div>
+<body class="auth-page">
+    <main class="auth-shell">
+        <section class="auth-card">
+            <h1>ログイン</h1>
+            <p class="auth-description">ログインして、あなたのくじ引きを管理しましょう。</p>
 
-            <section class="admin-card auth-card">
-                <div class="auth-card-header">
-                    <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.025em; margin-bottom: 8px;">Welcome Back</h1>
-                    <p style="color: var(--text-muted); font-size: 0.95rem;">ログイン</p>
-                </div>
-                <a href="/auth/login" class="btn primary" style="width: 100%; margin-top: 12px;">Common IDでログイン</a>
+            <a href="/auth/login" class="btn primary auth-action">ログイン</a>
 
-                <div class="auth-card-footer">
-                    <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 12px;">アカウントをお持ちでない場合</p>
-                    <a href="/signin" class="btn" style="width: 100%;">新規登録</a>
-                </div>
-            </section>
-            
-            <div style="text-align: center; margin-top: 24px;">
-                <a href="/" style="color: var(--text-muted); text-decoration: none; font-size: 0.9rem; font-weight: 500;">← トップページに戻る</a>
-            </div>
-        </main>
-    </div>
+            <div class="auth-divider"><span>または</span></div>
+            <p class="auth-switch-copy">アカウントをお持ちでない方</p>
+            <a href="/auth/signup" class="btn auth-action">アカウントを作成</a>
+            <a href="/" class="auth-back-link">トップページに戻る</a>
+        </section>
+    </main>
 
 </body>
 

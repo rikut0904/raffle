@@ -29,10 +29,6 @@ func Register(e *echo.Echo, adminHandler *handler.AdminHandler, commonID *auth.C
 	e.GET("/login", func(c echo.Context) error {
 		return c.File("html/login.html")
 	})
-	e.GET("/signin", func(c echo.Context) error {
-		return c.File("html/signin.html")
-	})
-
 	e.GET("/auth/login", adminHandler.BeginLogin)
 	e.GET("/auth/signup", adminHandler.BeginSignup)
 	e.GET("/auth/callback", adminHandler.Callback)
