@@ -82,7 +82,12 @@ func (h *AdminHandler) Callback(c echo.Context) error {
 	if c.QueryParam("error") != "" {
 		return c.Redirect(http.StatusFound, "/login?error=cancelled")
 	}
-	sess, _ := session.Get("session", c)
+	sess, err := session.Get("session", c)
+	if err != nil {
+		log.Printf("Failed to load session during Common ID callback: %v", err)
+		h.clearSession(c)
+		return c.Redirect(http.StatusFound, "/login?error=session_expired")
+	}
 	pending, err := pendingFromSession(sess)
 	if err != nil {
 		h.clearSession(c)
@@ -99,7 +104,6 @@ func (h *AdminHandler) Callback(c echo.Context) error {
 		return echo.NewHTTPError(http.StatusInternalServerError, "ユーザー情報を保存できません")
 	}
 
-	sess, _ = session.Get("session", c)
 	delete(sess.Values, loginPendingStateKey)
 	delete(sess.Values, loginPendingVerifierKey)
 	delete(sess.Values, loginPendingExpiryKey)
@@ -128,7 +132,11 @@ func (h *AdminHandler) clearSession(c echo.Context) {
 }
 
 func (h *AdminHandler) Logout(c echo.Context) error {
-	sess, _ := session.Get("session", c)
+	sess, err := session.Get("session", c)
+	if err != nil {
+		log.Printf("Failed to load session during logout: %v", err)
+		return c.Redirect(http.StatusFound, "/login")
+	}
 	if h.errorMessage != "" {
 		sess.Values = map[any]any{}
 		sess.Options = &sessions.Options{Path: "/", MaxAge: -1, HttpOnly: true, Secure: secureRequest(c), SameSite: http.SameSiteLaxMode}
@@ -148,7 +156,11 @@ func (h *AdminHandler) Logout(c echo.Context) error {
 }
 
 func (h *AdminHandler) LogoutCallback(c echo.Context) error {
-	sess, _ := session.Get("session", c)
+	sess, err := session.Get("session", c)
+	if err != nil {
+		log.Printf("Failed to load session during logout callback: %v", err)
+		return c.Redirect(http.StatusFound, "/login")
+	}
 	expectedState, _ := sess.Values[logoutPendingStateKey].(string)
 	_ = h.commonID.ValidateLogout(url.Values(c.QueryParams()), expectedState)
 	sess.Values = map[any]any{}
