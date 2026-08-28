@@ -34,7 +34,6 @@ func Register(e *echo.Echo, adminHandler *handler.AdminHandler, commonID *auth.C
 	e.GET("/auth/callback", adminHandler.Callback)
 	e.GET("/auth/logout", adminHandler.Logout)
 	e.GET("/auth/logout/callback", adminHandler.LogoutCallback)
-	e.POST("/api/auth/logout", adminHandler.Logout)
 
 	api := e.Group("/api/dashboard")
 	api.Use(AuthMiddleware(commonID))
