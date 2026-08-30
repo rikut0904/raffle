@@ -7,10 +7,6 @@ WORKDIR /app
 # ファイルを全部コピーする
 COPY . .
 
-# 設定ファイル（.env）をコピーする（初心者向けに分かりやすく）
-# 本番では docker run --env-file .env を使うのがかっこいいです！
-COPY .env .env
-
 # ライブラリを入れる
 RUN go mod download
 
